@@ -2,6 +2,7 @@ from django.shortcuts import render,redirect
 from store.models import Product,variations
 from .models import Cart , Cart_items
 from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
 
 # Create your views here.
 
@@ -14,7 +15,7 @@ def _cart_id(request):
 
 
 
-
+@login_required(login_url='signin')
 def add_cart(request,product_id):
     product= Product.objects.get(id=product_id)
     product_variations=[]
@@ -23,28 +24,29 @@ def add_cart(request,product_id):
             key=item
             value=request.POST[key]
             print(key,value)
-
-           
             try:
                 variation= variations.objects.get(product=product,variation_category__iexact=key,variation_value__iexact=value)
                 product_variations.append(variation)
-                print(" this printing product_variations")
-                print(product_variations)
-                print(type(product_variations))
-                print(" this printing variation")
-                print(variation)
-                print(type(variation))
-
+               
             except:
                 pass
            
-
-   
     try:
-        cart=Cart.objects.filter(cart_id=_cart_id(request)).first()
-    except Cart.DoesNotExist:
-        cart=Cart.objects.create(cart_id=_cart_id(request))
-        cart.save()
+       
+        cart=Cart.objects.filter(cart_id=_cart_id(request)).exists()
+       
+        if cart:
+            cart=Cart.objects.get(cart_id=_cart_id(request))
+        else:
+            cart=Cart.objects.create(cart_id=_cart_id(request))
+           
+            print(cart)
+            cart.save()
+
+
+    except Exception as e:
+        print(e)
+    
 
     is_cart_item_exist=Cart_items.objects.filter(product=product,cart=cart).exists()
     if is_cart_item_exist:
@@ -69,6 +71,7 @@ def add_cart(request,product_id):
 
     return redirect( 'cart')
 
+@login_required(login_url='signin')
 def remove_cart(request,product_id,cart_item_id):
     product= Product.objects.get(id=product_id)
     cart=Cart.objects.get(cart_id=_cart_id(request))
@@ -82,6 +85,7 @@ def remove_cart(request,product_id,cart_item_id):
         cart_item.delete()
 
     return redirect('cart')
+@login_required(login_url='signin')
 def add_cart_quantity(request,product_id,cart_item_id):
     product= Product.objects.get(id=product_id)
     cart=Cart.objects.get(cart_id=_cart_id(request))
@@ -93,7 +97,7 @@ def add_cart_quantity(request,product_id,cart_item_id):
     return redirect('cart')
    
 
-
+@login_required(login_url='signin')
 def delete_cart_item(request,product_id,cart_item_id):
     product= Product.objects.get(id=product_id,)
     cart=Cart.objects.get(cart_id=_cart_id(request))
@@ -106,10 +110,8 @@ def delete_cart_item(request,product_id,cart_item_id):
 
 
 
-
-        
-        
-
+ 
+@login_required(login_url='signin')
 def cart(request):
 
     # cart=Cart.objects.get(cart_id=_cart_id(request))

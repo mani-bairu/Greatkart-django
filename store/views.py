@@ -6,9 +6,11 @@ from cart.models import Cart_items
 from cart.views import _cart_id
 from django.core.paginator import Paginator,PageNotAnInteger,EmptyPage
 from django.db.models import Q
+from django.contrib.auth.decorators import login_required
 
 # Create your views here.
 
+@login_required(login_url='signin')
 def Store(request,category_slug=None):
   
 
@@ -34,6 +36,7 @@ def Store(request,category_slug=None):
     }
     return render(request,'store/store.html',context)
 
+@login_required(login_url='signin')
 def product_detail(request,category_slug,product_slug):
     product=None
     try:
@@ -48,6 +51,7 @@ def product_detail(request,category_slug,product_slug):
     }
     return render(request,'store/product_detail.html',context)
 
+@login_required(login_url='signin')
 def search(request):
     if 'keyword' in request.GET:
         keyword = request.GET.get('keyword')
