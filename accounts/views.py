@@ -11,6 +11,11 @@ from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator
 from django.core.mail import EmailMessage
 
+from cart.models import Cart,Cart_items
+from cart.views import _cart_id
+
+import requests
+
 # Create your views here.
 
 def register(request):
@@ -72,8 +77,74 @@ def signin(request):
         user= auth.authenticate(request,email=email,password=password)
 
         if user is not None: 
+
+            try:
+                cart=Cart.objects.get(cart_id=_cart_id(request))
+                cart_items_exist = Cart_items.objects.filter(cart=cart).exists()
+                if cart_items_exist:
+                    #geting product variations by cart id
+                    cart_items = Cart_items.objects.filter(cart=cart)
+                    product_variations=[]
+                    for items in cart_items:
+                        variations= items.variation.all()
+                        product_variations.append(list(variations))
+
+                    print(product_variations)
+
+                    # get the cart item from the user to access his product variations
+                    cart_items = Cart_items.objects.filter(user=user)
+                    ex_var_list=[]
+                    id=[]
+                    for items in cart_items:
+                        variations= items.variation.all()
+                        ex_var_list.append(list(variations))
+                        id.append(items.id)
+                    print(ex_var_list)
+
+                    for pr in product_variations:
+                        if pr in ex_var_list:
+                            print('enter in pr in ex_var_list')
+                            index= ex_var_list.index(pr)
+                            item_id= id[index]
+                            print('id:',item_id)
+                            item = Cart_items.objects.get(id=item_id)
+                            print(item.user)
+                            print(item.quantity)
+                            print(item.cart)
+                            item.quantity += 1
+                            item.user=user
+                            item.save()
+                            print(item.quantity)
+                        else:
+                            cart_items = Cart_items.objects.filter(cart=cart)
+                            for items in cart_items:
+                                items.user=user
+                                items.save()
+                else:
+                    cart_items = Cart_items.objects.filter(cart=cart)
+                    for items in cart_items:
+                        items.user=user
+                        items.save()
+
+
+            except Exception as e:
+                print(e)
+                
             auth.login(request,user)
-            return redirect('home')
+            messages.success(request,"you are now logged in ")
+            url=request.META.get('HTTP_REFERER')
+            try:
+                query=requests.utils.urlparse(url).query
+                # it gives next=/cart/checkout/
+                parms=dict(x.split('=') for x in query.split('&') )
+                print('this is dict',parms)
+                #it gives dictionry value {'next':'/cart/checkout,'}
+                for next in parms:
+                    nextpage=parms[next]
+                    print("this will redirect to next page",nextpage)
+                    return redirect(nextpage)
+            except:
+                return redirect('home')
 
         else:
            
@@ -82,7 +153,8 @@ def signin(request):
 
 
     return render(request,'accounts/signin.html')
-@login_required(login_url='signin')
+
+
 def logout(request):
     auth.logout(request)
     messages.success(request,'you are successfully logout!!')
